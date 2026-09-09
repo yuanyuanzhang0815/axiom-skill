@@ -33,7 +33,6 @@
       "read_areas": [],
       "acceptance": ["utils/answer.py written"],
       "failure_policy": {"max_retries": 2, "retry_guard": "requires_new_evidence", "on_exhausted": "block"},
-      "isolation": "worktree",
       "runtime_assets": []
     },
     "n_verify": {
