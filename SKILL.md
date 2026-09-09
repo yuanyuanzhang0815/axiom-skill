@@ -22,8 +22,10 @@ axiom owns the **control layer** (spec / IR / ledger / gate / repeat / verify), 
 
 | Backend | How it runs | Capabilities |
 |---|---|---|
-| `cc` (default) | `host_adapter --cc` (claude -p + cc-switch config; file protocol) | tools (no cost channel) |
-| `pi` | `host_adapter --pi` (pi NDJSON; file protocol) | cost, tools, cancel |
+| `cc` (default) | `host_adapter --cc` — `claude -p` using your local claude CLI config / `ANTHROPIC_API_KEY` (the cc-switch desktop app is auto-reused if running, otherwise bare `claude -p`); file protocol | tools (no cost channel) |
+| `pi` | `host_adapter --pi` — pi NDJSON file protocol (set `--provider`/`--model`/`--source` to YOUR provider; defaults `alibaba-cloud`/`glm-4.5`/`~/.zshrc` are examples) | cost, tools, cancel |
+
+> **External users (provider setup):** `--cc` works with just `claude` + `ANTHROPIC_API_KEY` (cc-switch is an optional local convenience). `--pi` needs YOUR provider — pass `--provider`/`--model`/`--source` (defaults are examples, not requirements). See `## Prerequisites (by backend)` and `python3 scripts/host_adapter.py --help`.
 
 The three backend axes are separated: **who executes** (backend), **where** (location, currently local), **what it can do** (capabilities). At run start these are recorded into `run_context.json` as `runtime_backend`; **resume inherits the recorded backend and re-spawns the host side automatically**. Explicitly switching backends on resume is a `backend_switch` ledger event **persisted into `run_context`** — the next no-arg resume keeps the new backend; it never silently reverts. A backend whose binary is missing (e.g. `pi` not on PATH) fails fast before the run starts.
 
@@ -503,8 +505,8 @@ Read-only. It surfaces TWO gaps against `wiki.jsonl`: (a) **contract gap** (high
 
 ## Prerequisites (by backend)
 
-- **pi backend**: `pi` on PATH; a provider key exported in your shell profile (the `host_adapter --pi` preset auto-sources it). Cost: when the GLM provider reports cost=0, `tokens_total` is the real-usage signal.
-- **cc backend**: the cc-switch desktop app running (auto-detected via its launcher tmpfile); otherwise falls back to bare `claude -p`.
+- **pi backend**: `pi` on PATH; YOUR provider's API key exported in a shell file (pass via `host_adapter --pi --source <file>`; the default `~/.zshrc` is an example — set it to wherever your key lives). Set `--provider`/`--model` to your provider (defaults `alibaba-cloud`/`glm-4.5` are examples). Cost: when the provider reports cost=0, `tokens_total` is the real-usage signal.
+- **cc backend**: `claude` on PATH + `ANTHROPIC_API_KEY` set (or your local claude config). If the cc-switch desktop app is running, its provider settings are auto-reused; otherwise `--cc` uses bare `claude -p` directly. cc-switch is optional, not required.
 
 ## Quick-start walkthrough (from task to VERIFIED)
 

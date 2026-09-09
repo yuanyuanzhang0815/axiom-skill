@@ -36,8 +36,10 @@ The runtime solves compute and context. axiom solves *what to work on, what evid
 
 | Backend | How | Capabilities |
 |---|---|---|
-| **cc** (default) | `host_adapter --cc` — `claude -p` + cc-switch config | tools |
-| **pi** | `host_adapter --pi` — pi NDJSON file protocol | cost, tools, cancel |
+| **cc** (default) | `host_adapter --cc` — dispatches via your local `claude -p` (uses your local claude config / `ANTHROPIC_API_KEY`). If the cc-switch desktop app is running, its provider settings are auto-reused; otherwise bare `claude -p` is used directly. | tools |
+| **pi** | `host_adapter --pi` — pi NDJSON file protocol. Set `--provider`/`--model`/`--source` to YOUR provider; the defaults (`alibaba-cloud`/`glm-4.5`/`~/.zshrc`) are examples, not requirements. | cost, tools, cancel |
+
+> **External users:** both backends work with any provider you configure. cc needs `claude` + `ANTHROPIC_API_KEY` (cc-switch is an optional local convenience for its users, not required). pi needs the `pi` CLI + your provider's API key exported in a shell file (pass via `--source`). The defaults in `host_adapter.py` are documented examples for one specific provider — override them with your own.
 
 The host adapter (`scripts/host_adapter.py`) is the *only* host-side code any agent runtime needs to plug into axiom — it bridges the file protocol to the underlying CLI. Bring your own worker by writing a `dispatch_res_{rid}.json` envelope; see `scripts/host_adapter.py`.
 

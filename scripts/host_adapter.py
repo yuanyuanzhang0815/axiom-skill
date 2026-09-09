@@ -170,6 +170,10 @@ def _find_cc_switch_settings():
     the fallback ~/.claude/settings.json hits the 15721 proxy which 502s on
     the custom model name. The fix is not to abandon cc but to reuse the
     launcher tmpfile so `claude -p` = interactive cc config.
+
+    cc-switch is an OPTIONAL local convenience for its users; bare `claude -p`
+    with a standard ANTHROPIC_API_KEY works without it (the --cc preset falls
+    back to `claude -p` when no cc-switch tmpfile is found).
     """
     import glob
     pid = None
@@ -387,27 +391,33 @@ def main(argv=None):
                    help="agent command with {prompt}/{cwd} placeholders, e.g. "
                         "'pi --prompt {prompt} --json'. Omit for mock mode.")
     p.add_argument("--pi", action="store_true",
-                   help="pi preset: source ~/.zshrc (DASHSCOPE_API_KEY auth), "
-                        "parse pi --mode json NDJSON, use alibaba-cloud/glm with "
-                        "thinking off. --model overrides the default model.")
+                   help="pi preset: pi NDJSON (--mode json) with thinking off. "
+                        "Defaults are EXAMPLES for alibaba-cloud/glm — set "
+                        "--provider/--model/--source to YOUR provider and the "
+                        "shell file exporting its API key. See 'Backend setup' "
+                        "in SKILL.md.")
     p.add_argument("--cc", action="store_true",
-                   help="Claude Code (cc switch) preset: locate the cc-switch "
-                        "launcher settings tmpfile (the file interactive cc "
-                        "uses as `claude --settings <tmpfile>`) and pass it to "
-                        "`claude -p`, so the non-interactive run uses the same "
-                        "provider config as your interactive cc session. "
-                        "Prompt is piped via stdin. Fixes: `claude -p` without "
-                        "--settings reads ~/.claude/settings.json (proxy-15721) "
-                        "and 502s under cc switch; and `claude -p` waits 3s for "
-                        "stdin if none is piped.")
+                   help="Claude Code preset: dispatch via `claude -p` (uses your "
+                        "local claude CLI config / ANTHROPIC_API_KEY). If the "
+                        "cc-switch desktop app is running, its launcher settings "
+                        "tmpfile is auto-reused so `claude -p` matches your "
+                        "interactive cc session's provider; otherwise falls back "
+                        "to bare `claude -p`. Prompt piped via stdin. cc-switch "
+                        "is an OPTIONAL local convenience, not required.")
+    p.add_argument("--provider", default="alibaba-cloud",
+                   help="pi provider (with --pi); default is an EXAMPLE for "
+                        "alibaba-cloud — set to YOUR provider (e.g. openai, "
+                        "anthropic, deepseek, ...).")
     p.add_argument("--model", default="glm-4.5",
-                   help="pi model (with --pi); defaults to a generic model — set to your provider's model.")
+                   help="pi model (with --pi); default is an EXAMPLE model — "
+                        "set to a model YOUR provider serves.")
     p.add_argument("--tools", action="store_true",
                    help="with --pi: allow pi's tools (for coding dispatches). "
                         "Default off (pure text answer, cheapest).")
     p.add_argument("--source",
-                   help="shell file to source before the agent cmd (loads API "
-                        "keys from the interactive profile, e.g. ~/.zshrc).")
+                   help="shell file to source before the agent cmd (exports "
+                        "YOUR provider's API key; example ~/.zshrc — set to "
+                        "wherever your key lives).")
     p.add_argument("--parse", choices=["raw", "pi-json"], default="raw",
                    help="raw: stdout=result_text (default); pi-json: parse pi's "
                         "--mode json NDJSON into result_text/cost/turns.")
@@ -433,7 +443,7 @@ def main(argv=None):
         if not args.agent_cmd:
             tools_flag = "" if args.tools else "--no-tools"
             args.agent_cmd = (
-                f"pi -p --mode json --provider alibaba-cloud "
+                f"pi -p --mode json --provider {shlex.quote(args.provider)} "
                 f"--model {shlex.quote(args.model)} --thinking off "
                 f"{tools_flag} {{prompt}}".replace("  ", " "))
     # --cc preset: reuse the cc-switch launcher settings tmpfile so
