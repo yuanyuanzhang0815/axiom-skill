@@ -164,6 +164,12 @@ def _find_cc_switch_settings():
     tmpfile makes `claude -p` use the identical provider config the
     interactive cc session uses. Returns the tmpfile path or None.
 
+    This is an OPTIONAL convenience for cc-switch users, not a requirement:
+    when it returns None, the `--cc` preset falls back to bare `claude -p`,
+    which uses whatever claude config / API key the caller already has. The
+    whole function may simply never find a tmpfile on a machine without
+    cc-switch, and that is the normal, supported path.
+
     Friction (a real editing-task relay, Path A): `claude -p` was deemed unusable as
     an axiom worker under cc switch — env ANTHROPIC_DEFAULT_*_MODEL are set
     to custom names (glm/qwen/llama) the model catalog doesn't recognize, and
