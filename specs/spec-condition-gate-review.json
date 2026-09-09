@@ -1,0 +1,112 @@
+{
+  "spec_version_id": "spec.condition-gate.v1",
+  "parent_spec_id": null,
+  "revision": 1,
+  "intent": "Review a code change: if the review approves, proceed to implement; if it flags critical issues, open a gate for human escalation before implementing.",
+  "requirements": [
+    {"id": "R1", "text": "Code review performed and implementation completed", "criticality": "required"}
+  ],
+  "boundaries": [
+    "no destructive operations",
+    "no network calls to production"
+  ],
+  "success_evidence": ["S1:R1=node:n_verify"],
+  "contract_drift": false,
+  "contract_hash_value": "",
+  "nodes": {
+    "n_review": {
+      "type": "agent",
+      "id": "n_review",
+      "prompt": "Review the Python code in the project. Look at the main source files under src/ or the root. Assess: is the code well-structured? Are there any bugs or issues? Return {verdict: 'APPROVED' or 'CHANGES_NEEDED', findings: [...], summary: '...'} with your assessment.",
+      "dispatch": "host",
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "verdict": {"type": "string"},
+          "findings": {"type": "array", "items": {"type": "string"}},
+          "summary": {"type": "string"}
+        },
+        "required": ["verdict"]
+      },
+      "allowed_tools": ["Read", "Glob", "Grep"],
+      "write_areas": [],
+      "read_areas": [],
+      "acceptance": ["verdict field present"],
+      "failure_policy": {"max_retries": 2, "retry_guard": "requires_new_evidence", "on_exhausted": "degrade"}
+    },
+    "n_branch": {
+      "type": "condition",
+      "id": "n_branch",
+      "predicate": "{{n_review.validated_output.verdict}} == 'APPROVED'",
+      "then_branch": ["n_implement_approved"],
+      "else_branch": ["n_implement_with_fix"],
+      "gate": true
+    },
+    "n_implement_approved": {
+      "type": "agent",
+      "id": "n_implement_approved",
+      "prompt": "The code review was APPROVED. Write a file utils/review_result.txt containing 'REVIEW: APPROVED - implementation proceeding'. Return the list of files modified.",
+      "dispatch": "host",
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "files_modified": {"type": "array", "items": {"type": "string"}},
+          "summary": {"type": "string"}
+        },
+        "required": ["files_modified"]
+      },
+      "allowed_tools": ["Read", "Edit", "Write", "Glob"],
+      "write_areas": ["utils/**"],
+      "read_areas": [],
+      "acceptance": ["file written"],
+      "failure_policy": {"max_retries": 2, "retry_guard": "requires_new_evidence", "on_exhausted": "block"},
+      "isolation": "worktree"
+    },
+    "n_implement_with_fix": {
+      "type": "agent",
+      "id": "n_implement_with_fix",
+      "prompt": "The code review flagged CHANGES_NEEDED. Write a file utils/review_result.txt containing 'REVIEW: CHANGES_NEEDED - fixes applied before implementation'. Return the list of files modified.",
+      "dispatch": "host",
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "files_modified": {"type": "array", "items": {"type": "string"}},
+          "summary": {"type": "string"}
+        },
+        "required": ["files_modified"]
+      },
+      "allowed_tools": ["Read", "Edit", "Write", "Glob"],
+      "write_areas": ["utils/**"],
+      "read_areas": [],
+      "acceptance": ["file written"],
+      "failure_policy": {"max_retries": 2, "retry_guard": "requires_new_evidence", "on_exhausted": "block"},
+      "isolation": "worktree"
+    },
+    "n_verify": {
+      "type": "agent",
+      "id": "n_verify",
+      "verdict_field": "verdict",
+      "prompt": "Read utils/review_result.txt and confirm it exists and contains a valid review result string. Return {verdict: 'VERIFIED'} if the file exists with valid content, or {verdict: 'FAILED', issues: [...]} otherwise.",
+      "dispatch": "host",
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "verdict": {"type": "string"},
+          "issues": {"type": "array", "items": {"type": "string"}}
+        },
+        "required": ["verdict"]
+      },
+      "allowed_tools": ["Read", "Glob"],
+      "write_areas": [],
+      "read_areas": ["utils/**"],
+      "acceptance": ["verdict field present"],
+      "failure_policy": {"max_retries": 2, "retry_guard": "requires_new_evidence", "on_exhausted": "degrade"}
+    }
+  },
+  "control_flow": {"type": "sequence", "steps": ["n_review", "n_branch", "n_verify"]},
+  "decision_trace": [],
+  "budget_usd": 5.0,
+  "max_concurrent": 1,
+  "max_agents": 5,
+  "max_stagnation": 2
+}

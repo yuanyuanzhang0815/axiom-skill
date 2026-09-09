@@ -1,0 +1,19 @@
+#!/bin/sh
+# axiom — deterministic workflow harness CLI.
+# Sets PYTHONPATH to the skill root so `python3 -m axiom` resolves the package.
+# Resolve python3 explicitly (mirror dispatch._real_runner's node resolution):
+# /usr/bin/python3 is present on every non-interactive ssh we've seen, but a bare
+# `exec python3` would still die if a minimal PATH lacked it. `command -v` first,
+# /usr/bin/python3 fallback.
+SKILL_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+PY="$(command -v python3 2>/dev/null || echo /usr/bin/python3)"
+# Force the installed skill's `axiom` package to win over any same-named
+# package in the caller's cwd. `python3 -m axiom` + PYTHONPATH loses to
+# cwd's sys.path[0] ('') under -m, so a worktree that vendors an `axiom/`
+# package (e.g. the skill's own dev sandbox) shadows the installed skill
+# and `wiki pattern list` then reads an empty store (the dev root has no
+# skill_patterns.jsonl; the store lives at the installed skill root). The
+# -c bootstrap does sys.path.insert(0, SKILL_DIR) in-process so the
+# installed skill wins regardless of cwd; sys.argv[0]='axiom' keeps
+# argparse's prog name correct (main() reads sys.argv[1:] via parse_args).
+exec "$PY" -c "import sys;sys.path.insert(0,'$SKILL_DIR');sys.argv[0]='axiom';from axiom.cli import main;raise SystemExit(main())" "$@"

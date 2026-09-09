@@ -1,0 +1,74 @@
+{
+  "spec_version_id": "spec.repeat-until-dry.v1",
+  "parent_spec_id": null,
+  "revision": 1,
+  "intent": "Implement a Python function that returns 42, then verify it with skeptic review, looping until the verification converges (dry<2).",
+  "requirements": [
+    {"id": "R1", "text": "utils/answer.py exists and defines def answer() returning 42", "criticality": "required"}
+  ],
+  "boundaries": [
+    "only create/modify files under utils/",
+    "no external dependencies",
+    "no network calls"
+  ],
+  "success_evidence": ["S1:R1=node:n_verify"],
+  "contract_drift": false,
+  "contract_hash_value": "",
+  "nodes": {
+    "n_implement": {
+      "type": "agent",
+      "id": "n_implement",
+      "prompt": "Create or fix the file utils/answer.py so it contains exactly: def answer(): return 42. If the file already exists with wrong content, fix it. Return the list of files you modified.",
+      "dispatch": "host",
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "files_modified": {"type": "array", "items": {"type": "string"}},
+          "summary": {"type": "string"}
+        },
+        "required": ["files_modified"]
+      },
+      "allowed_tools": ["Read", "Edit", "Write", "Glob"],
+      "write_areas": ["utils/**"],
+      "read_areas": [],
+      "acceptance": ["utils/answer.py written"],
+      "failure_policy": {"max_retries": 2, "retry_guard": "requires_new_evidence", "on_exhausted": "block"},
+      "isolation": "worktree",
+      "runtime_assets": []
+    },
+    "n_verify": {
+      "type": "agent",
+      "id": "n_verify",
+      "verdict_field": "verdict",
+      "prompt": "Read utils/answer.py. Check: (1) the file exists, (2) it defines a function called 'answer', (3) calling answer() returns 42 (verify by reading the code — the function should be a simple return). Return {verdict: 'VERIFIED'} if all checks pass, or {verdict: 'FAILED', issues: [...]} listing what's wrong.",
+      "dispatch": "host",
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "verdict": {"type": "string"},
+          "issues": {"type": "array", "items": {"type": "string"}}
+        },
+        "required": ["verdict"]
+      },
+      "allowed_tools": ["Read", "Glob", "Bash"],
+      "write_areas": [],
+      "read_areas": ["utils/**"],
+      "acceptance": ["verdict field present"],
+      "failure_policy": {"max_retries": 2, "retry_guard": "requires_new_evidence", "on_exhausted": "degrade"}
+    },
+    "loop_fix": {
+      "type": "repeat",
+      "id": "loop_fix",
+      "body": ["n_implement", "n_verify"],
+      "max_iterations": 3,
+      "until": "dry<2",
+      "failure_policy": {"on_exhausted": "block"}
+    }
+  },
+  "control_flow": {"type": "sequence", "steps": ["loop_fix"]},
+  "decision_trace": [],
+  "budget_usd": 5.0,
+  "max_concurrent": 1,
+  "max_agents": 5,
+  "max_stagnation": 2
+}

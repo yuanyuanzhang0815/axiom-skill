@@ -1,0 +1,43 @@
+__pycache__/
+.venv/
+.pytest_cache/
+*.egg-info/
+.axiom/
+dist/
+
+# Per-tool skill snapshots are regenerable copies (canonical skills live in
+# <skill_root>/). Safe to ignore across tools.
+.agents/
+.amazonq/
+.augment/
+.bob/
+.cline/
+.clinerules/
+.codebuddy/
+.codegraph/
+.codex/
+.continue/
+.cospec/
+.crush/
+.cursor/
+.factory/
+.forge/
+.gemini/
+.iflow/
+.junie/
+.kilocode/
+.kiro/
+.lingma/
+.mimocode/
+.opencode/
+.pi/
+.qoder/
+.qwen/
+.roo/
+.trae-cn/
+.trae/
+.windsurf/
+.zcode/
+
+# Local Claude Code settings (personal)
+.claude/settings.local.json
